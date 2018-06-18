@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<plugin xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/shopware/shopware/5.3/engine/Shopware/Components/Plugin/schema/plugin.xsd">
+    <label lang="de">Einkaufswelten erweitert</label>
+    <label lang="en">Shopping worlds expanded</label>
+
+    <version>0.0.1</version>
+    <copyright>(c) by KMA39</copyright>
+    <license>MIT</license>
+    <link>https://kma39.de</link>
+    <author>KMA39</author>
+    <compatibility minVersion="5.3.0"/>
+    <description lang="en">The plugin makes it possible to place shopping worlds in article pages, article listings and shop pages.</description>
+    <description lang="de">Das Plugin ermöglicht das Platzieren von Einkaufswelten in Atikelseiten, in Artikellisting und in Shopseiten.</description>
+
+</plugin>
