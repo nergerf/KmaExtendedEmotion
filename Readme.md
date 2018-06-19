@@ -1,5 +1,5 @@
-# KmaNeroTheme
-## About KmaNeroTheme
+# KmaExtendedEmotion
+## About KmaExtendedEmotion
 This skeleton contains a License file, fileheader and a basic README.
 
 ## License
