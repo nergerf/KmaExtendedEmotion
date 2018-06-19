@@ -62,7 +62,7 @@ class KmaExtendedEmotionSubscriber implements SubscriberInterface
             }
         }
 
-        if(strtolower($request->getControllerName()) == "listing")
+        if(strtolower($request->getControllerName()) == "listing" || strtolower($request->getControllerName()) == "blog")
         {
             $attributes = $view->getAssign("sCategoryContent")["attributes"]["core"];
 
