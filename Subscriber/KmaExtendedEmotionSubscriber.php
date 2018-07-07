@@ -2,135 +2,242 @@
 
 namespace KmaExtendedEmotion\Subscriber;
 
-use Doctrine\Common\Collections\ArrayCollection;
-use \Enlight\Event\SubscriberInterface;
+use Doctrine\DBAL\Connection;
+use Enlight\Event\SubscriberInterface;
+use Shopware\Bundle\AttributeBundle\Service\DataLoader;
 
 class KmaExtendedEmotionSubscriber implements SubscriberInterface
 {
     /**
+     * @var string
+     */
+    private $pluginPath;
+
+    /**
+     * @var Connection
+     */
+    private $connection;
+
+    /**
+     * @var DataLoader
+     */
+    private $attributeLoader;
+
+    /**
+     * @param string
+     * @param Connection $connection
+     */
+    public function __construct($pluginPath, Connection $connection, DataLoader $attributeLoader)
+    {
+        $this->pluginPath = $pluginPath;
+        $this->connection = $connection;
+        $this->attributeLoader = $attributeLoader;
+    }
+
+    /**
      * @return array
-     * Required for adding the register subscriber event before dispatching
+     *               Required for adding the register subscriber event before dispatching
      */
     public static function getSubscribedEvents()
     {
         return [
-            'Enlight_Controller_Front_StartDispatch' => 'onRegisterSubscriber',
-            'Shopware_Console_Add_Command' => 'onRegisterSubscriber',
-            'Enlight_Controller_Action_PostDispatchSecure_Frontend' => 'onPostDispatchSecure',
-            'Theme_Compiler_Collect_Plugin_Less' => 'onCollectPluginLess'
+            'Enlight_Controller_Action_PostDispatchSecure_Frontend_Listing' => 'onListingPostDispatch',
+            'Enlight_Controller_Action_PostDispatchSecure_Frontend_Blog' => 'onBlogPostDispatch',
+            'Enlight_Controller_Action_PostDispatchSecure_Frontend_Detail' => 'onDetailPostDispatch',
+            'Enlight_Controller_Action_PostDispatchSecure_Frontend_Custom' => 'onCustomPagePostDispatch',
+            'Enlight_Controller_Action_PostDispatchSecure_Frontend_Forms' => 'onFormPagePostDispatch'
         ];
     }
 
-	private function getPlugin()
-	{
-		if($this->plugin == NULL)
-			$this->plugin = Shopware()->Container()->get('kernel')->getPlugins()['KmaCustomEmotion'];
-		
-		return $this->plugin;
-	}
-	
-    public function onPostDispatchSecure(\Enlight_Event_EventArgs $args) 
-	{
-
-        // Fetch the controller
-        $controller = $args->get('subject');
-		
-        // Fetch the view and add the plugins view directory
+    /**
+     * Extend listing
+     *
+     * @param \Enlight_Event_EventArgs $args
+     */
+    public function onListingPostDispatch(\Enlight_Event_EventArgs $args)
+    {
+        /** @var \Enlight_Controller_Action $subject */
+        $controller = $args->getSubject();
+        $request = $controller->Request();
         $view = $controller->View();
-		
-        $view->addTemplateDir(
-           __DIR__ . '/../Resources/views/'
-        );
 
-        $request = $args->getSubject()->Request();
+        $categoryId = $request->getParam('sCategory', 0);
 
-        if(strtolower($request->getControllerName()) == "detail" && !empty($view->getAssign("sArticle")))
-        {
-            $attributes = $view->getAssign("sArticle")["attributes"]["core"];
-
-            if($attributes != NULL)
-            {
-                $emotionAbove = $this->selectEmotionData($attributes->get("kma_article_emotion_above"));
-                $emotionBelow = $this->selectEmotionData($attributes->get("kma_article_emotion_below"));
-                $emotionDescAbove = $this->selectEmotionData($attributes->get("kma_article_emotion_desc_above"));
-                $emotionDescBelow = $this->selectEmotionData($attributes->get("kma_article_emotion_desc_below"));
-
-                $view->assign("kmaEmotionArticleAbove", $emotionAbove);
-                $view->assign("kmaEmotionArticleBelow", $emotionBelow);
-                $view->assign("kmaEmotionArticleDescAbove", $emotionDescAbove);
-                $view->assign("kmaEmotionArticleDescBelow", $emotionDescBelow);
-            }
+        if (!$categoryId) {
+            return;
         }
 
-        if(strtolower($request->getControllerName()) == "listing" || strtolower($request->getControllerName()) == "blog")
-        {
-            $attributes = $view->getAssign("sCategoryContent")["attributes"]["core"];
+        $categoryAttributes = $this->attributeLoader->load('s_categories_attributes', $categoryId);
 
-            if($attributes != NULL)
-            {
-                $emotionAbove = $this->selectEmotionData($attributes->get("kma_category_emotion_above"));
-                $emotionBelow = $this->selectEmotionData($attributes->get("kma_category_emotion_below"));
+        $emotionAbove = $this->selectEmotionData($categoryAttributes['kma_category_emotion_above']);
+        $emotionBelow = $this->selectEmotionData($categoryAttributes['kma_category_emotion_below']);
 
-                $view->assign("kmaEmotionCategoryAbove", $emotionAbove);
-                $view->assign("kmaEmotionCategoryBelow", $emotionBelow);
-            }
+        $view->assign('kmaEmotionCategoryAbove', $emotionAbove);
+        $view->assign('kmaEmotionCategoryBelow', $emotionBelow);
 
+        $view->addTemplateDir($this->pluginPath . '/Resources/views/');
+    }
+    
+    /**
+     * Extend blog detail page
+     *
+     * @param \Enlight_Event_EventArgs $args
+     */
+    public function onBlogPostDispatch(\Enlight_Event_EventArgs $args) {
+        
+        /** @var \Enlight_Controller_Action $subject */
+        $controller = $args->getSubject();
+        $request = $controller->Request();
+        $view = $controller->View();
+
+        $actionName = strtolower($request->getActionName());
+
+        if($actionName == 'detail') {
+            $parameterName = 'blogArticle';
+            $attributesTable = 's_blog_attributes';
+            $attributeNameAbove = 'kma_blog_emotion_above';
+            $attributeNameBelow = 'kma_blog_emotion_below';
+            $viewVariableNameEmotionAbove = 'kmaEmotionBlogAbove';
+            $viewVariableNameEmotionBelow = 'kmaEmotionBlogBelow';
+        }else{
+            $parameterName = 'sCategory';
+            $attributesTable = 's_categories_attributes';
+            $attributeNameAbove = 'kma_category_emotion_above';
+            $attributeNameBelow = 'kma_category_emotion_below';
+            $viewVariableNameEmotionAbove = 'kmaEmotionBlogCategoryAbove';
+            $viewVariableNameEmotionBelow = 'kmaEmotionBlogCategoryBelow';
         }
 
-        if(strtolower($request->getControllerName()) == "custom")
-        {
-            $attributes = $view->getAssign("sCustomPage")["attribute"];
-
-            if($attributes != NULL)
-            {
-                $emotionAbove = $this->selectEmotionData($view->getAssign("sCustomPage")["attribute"]["kma_cms_static_emotion_above"]);
-                $emotionBelow = $this->selectEmotionData($view->getAssign("sCustomPage")["attribute"]["kma_cms_static_emotion_below"]);
-
-                $view->assign("kmaEmotionCustomAbove", $emotionAbove);
-                $view->assign("kmaEmotionCustomleBelow", $emotionBelow);
-
-
-            }
+        $id = $request->getParam($parameterName, 0);
+        
+        if(!$id) {
+            return;
         }
 
+        $attributes = $this->attributeLoader->load($attributesTable, $id);
+
+        $emotionAbove = $this->selectEmotionData($attributes[$attributeNameAbove]);
+        $emotionBelow = $this->selectEmotionData($attributes[$attributeNameBelow]);
+
+        $view->assign($viewVariableNameEmotionAbove, $emotionAbove);
+        $view->assign($viewVariableNameEmotionBelow, $emotionBelow);    
+
+        $view->addTemplateDir($this->pluginPath . '/Resources/views/');
     }
 
+    /**
+     * Extend detail page of product
+     *
+     * @param \Enlight_Event_EventArgs $args
+     */
+    public function onDetailPostDispatch(\Enlight_Event_EventArgs $args)
+    {
+        /** @var \Enlight_Controller_Action $subject */
+        $controller = $args->getSubject();
+        $request = $controller->Request();
+        $view = $controller->View();
+
+        $articleId = $request->getParam('sArticle', 0);
+
+        if (!$articleId) {
+            return;
+        }
+
+        $articleAttributes = $this->attributeLoader->load('s_articles_attributes', $articleId);
+
+        $emotionAbove = $this->selectEmotionData($articleAttributes['kma_article_emotion_above']);
+        $emotionBelow = $this->selectEmotionData($articleAttributes['kma_article_emotion_below']);
+        $emotionDescAbove = $this->selectEmotionData($articleAttributes['kma_article_emotion_desc_above']);
+        $emotionDescBelow = $this->selectEmotionData($articleAttributes['kma_article_emotion_desc_below']);
+
+        $view->assign('kmaEmotionArticleAbove', $emotionAbove);
+        $view->assign('kmaEmotionArticleBelow', $emotionBelow);
+        $view->assign('kmaEmotionArticleDescAbove', $emotionDescAbove);
+        $view->assign('kmaEmotionArticleDescBelow', $emotionDescBelow);
+
+        $view->addTemplateDir($this->pluginPath . '/Resources/views/');
+    }
+
+    /**
+     * Extend custom page
+     *
+     * @param \Enlight_Event_EventArgs $args
+     */
+    public function onCustomPagePostDispatch(\Enlight_Event_EventArgs $args)
+    {
+        /** @var \Enlight_Controller_Action $subject */
+        $controller = $args->getSubject();
+        $request = $controller->Request();
+        $view = $controller->View();
+
+        $customPageId = $request->getParam('sCustom', 0);
+
+        if(!$customPageId) {
+            return;
+        }
+
+        $customPageAttributes = $this->attributeLoader->load('s_cms_static_attributes', $customPageId);
+
+        $emotionAbove = $this->selectEmotionData($customPageAttributes['kma_cms_static_emotion_above']);
+        $emotionBelow = $this->selectEmotionData($customPageAttributes['kma_cms_static_emotion_below']);
+
+        $view->assign('kmaEmotionCustomPageAbove', $emotionAbove);
+        $view->assign('kmaEmotionCustomPageBelow', $emotionBelow);
+
+        $view->addTemplateDir($this->pluginPath . '/Resources/views/');
+    }
+
+    /**
+     * Extend form page
+     *
+     * @param \Enlight_Event_EventArgs $args
+     */
+    public function onFormPagePostDispatch(\Enlight_Event_EventArgs $args)
+    {
+        /** @var \Enlight_Controller_Action $subject */
+        $controller = $args->getSubject();
+        $request = $controller->Request();
+        $view = $controller->View();
+
+        $formId = $request->getParam('sFid', 0);
+
+        if(!$formId) {
+            return;
+        }
+
+        $formAttributes = $this->attributeLoader->load('s_cms_support_attributes', $formId);
+
+        $emotionAbove = $this->selectEmotionData($formAttributes['kma_cms_support_emotion_above']);
+        $emotionBelow = $this->selectEmotionData($formAttributes['kma_cms_support_emotion_below']);
+
+        $view->assign('kmaEmotionFormAbove', $emotionAbove);
+        $view->assign('kmaEmotionFormBelow', $emotionBelow);
+
+        $view->addTemplateDir($this->pluginPath . '/Resources/views/');
+    }
+
+    /**
+     * Helper to get the emotion world from the database
+     *
+     * @param array $attribute
+     * @return array
+     */
     private function selectEmotionData($attribute)
     {
-        try
-        {
-            $attribute = explode("|", $attribute);
-            unset($attribute[count($attribute)-1]);
-            unset($attribute[0]);
-            $attribute = array_values($attribute);//remap array indices
-            $placeholders = str_repeat ('?, ',  count ($attribute) - 1) . '?';
+        $attributes = explode('|', $attribute);
+        $attributes = array_filter($attributes);
+        $ids = array_values($attributes);
 
-            return Shopware()->Db()->query("SELECT id, device
-				FROM s_emotion 
-				WHERE id IN (".$placeholders.")
-				AND active = 1
-				ORDER BY position ASC", $attribute)->fetchAll();
-        }
-        catch(\Exception $e)
-        {
-            return [];
-        }
+        $emotionWorlds = $this->connection->createQueryBuilder()
+            ->select(['id', 'device'])
+            ->from('s_emotion')
+            ->where('id IN (:ids)')
+            ->andWhere('active = 1')
+            ->setParameter(':ids', $ids, Connection::PARAM_INT_ARRAY)
+            ->orderBy('position', 'ASC')
+            ->execute()
+            ->fetchAll();
+
+        return $emotionWorlds;
     }
-
-    public function onCollectPluginLess() 
-	{
-		
-        $less = new \Shopware\Components\Theme\LessDefinition(
-            array(
-			
-			),
-            [$this->getPlugin()->getPath() . '/Resources/views/frontend/_public/src/less/all.less'],
-			__DIR__
-        ); 
-		
-		return new ArrayCollection(array($less));
-    }
-
 }
-
-?>

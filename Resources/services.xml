@@ -3,14 +3,11 @@
 <container xmlns="http://symfony.com/schema/dic/services"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://symfony.com/schema/dic/services http://symfony.com/schema/dic/services/services-1.0.xsd">
-
     <services>
-        <service class="KmaExtendedEmotion\Subscriber\KmaExtendedEmotionSubscriber" id="kma_extended_emotion.subscriber.kma_cextended_emotion_subscriber">
-            <tag name="shopware.event_subscriber"/>
-        </service>
-
-        <service class="KmaExtendedEmotion\KmaExtendedEmotion" id="kma_extended_emotion.kma_extended_emotion">
-            <argument id="service_container" type="service"/>
+        <service id="kma_extended_emotion.subscriber.kma_cextended_emotion_subscriber" class="KmaExtendedEmotion\Subscriber\KmaExtendedEmotionSubscriber">
+            <argument>%kma_extended_emotion.plugin_dir%</argument>
+            <argument type="service" id="dbal_connection" />
+            <argument type="service" id="shopware_attribute.data_loader" />
             <tag name="shopware.event_subscriber"/>
         </service>
     </services>
