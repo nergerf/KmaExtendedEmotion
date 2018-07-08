@@ -133,6 +133,62 @@
              null, true
          );
 
+         $attributeService->update(
+            's_blog_attributes',
+            'kma_blog_emotion_above',
+            'multi_selection',
+            [
+                'displayInBackend' => true,
+                'label' => 'Einkaufswelt oberhalb Inhalt',
+                'translatable' => true,
+                'columnType' => 'single_selection', 'entity' => "Shopware\Models\Emotion\Emotion",
+                'arrayStore' => ""
+            ],
+            null, true
+        );
+
+        $attributeService->update(
+            's_blog_attributes',
+            'kma_blog_emotion_below',
+            'multi_selection',
+            [
+                'displayInBackend' => true,
+                'label' => 'Einkaufswelt unterhalb Inhalt',
+                'translatable' => true,
+                'columnType' => 'single_selection', 'entity' => "Shopware\Models\Emotion\Emotion",
+                'arrayStore' => ""
+            ],
+            null, true
+        );
+
+        $attributeService->update(
+            's_cms_support_attributes',
+            'kma_cms_support_emotion_above',
+            'multi_selection',
+            [
+                'displayInBackend' => true,
+                'label' => 'Einkaufswelt oberhalb Inhalt',
+                'translatable' => true,
+                'columnType' => 'single_selection', 'entity' => "Shopware\Models\Emotion\Emotion",
+                'arrayStore' => ""
+            ],
+            null, true
+        );
+
+        $attributeService->update(
+            's_cms_support_attributes',
+            'kma_cms_support_emotion_below',
+            'multi_selection',
+            [
+                'displayInBackend' => true,
+                'label' => 'Einkaufswelt unterhalb Inhalt',
+                'translatable' => true,
+                'columnType' => 'single_selection', 'entity' => "Shopware\Models\Emotion\Emotion",
+                'arrayStore' => ""
+            ],
+            null, true
+        );
+
          parent::install($context);
 
      }
@@ -181,6 +237,7 @@
          if($context->keepUserData()) {
             return;
          }
+
          $attributeService = $this->container->get('shopware_attribute.crud_service');
 
          $attributeService->delete('s_articles_attributes', 'kma_article_emotion_above');
@@ -193,6 +250,12 @@
 
          $attributeService->delete('s_cms_static_attributes', 'kma_cms_static_emotion_above');
          $attributeService->delete('s_cms_static_attributes', 'kma_cms_static_emotion_below');
+
+         $attributeService->delete('s_blog_attributes', 'kma_blog_emotion_above');
+         $attributeService->delete('s_blog_attributes'. 'kma_blog_emotion_below');
+
+         $attributeService->delete('s_cms_support_attributes', 'kma_cms_support_emotion_above');
+         $attributeService->delete('s_cms_support_attributes', 'kma_cms_support_emotion_below');
 
          $context->scheduleClearCache(InstallContext::CACHE_LIST_ALL);
 
