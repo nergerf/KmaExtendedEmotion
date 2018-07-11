@@ -252,7 +252,7 @@
          $attributeService->delete('s_cms_static_attributes', 'kma_cms_static_emotion_below');
 
          $attributeService->delete('s_blog_attributes', 'kma_blog_emotion_above');
-         $attributeService->delete('s_blog_attributes'. 'kma_blog_emotion_below');
+         $attributeService->delete('s_blog_attributes', 'kma_blog_emotion_below');
 
          $attributeService->delete('s_cms_support_attributes', 'kma_cms_support_emotion_above');
          $attributeService->delete('s_cms_support_attributes', 'kma_cms_support_emotion_below');
